@@ -2,5 +2,13 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+#here we defines the endpoints which we can pass while giving the commands
+[rpc_endpoints]
+sepolia = "https://sepolia.infura.io/v3/84957a0b5c6f43668c65a3cc65ac53ce"
+
+#here we can define the etherscan-api for verification, by passing --verify parameter
+[etherscan]
+sepolia = { key = "E31XU9BEEEMVEPH7XRICNN2N7ASJQMXEI9" }
