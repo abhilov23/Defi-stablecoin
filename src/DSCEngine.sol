@@ -53,12 +53,17 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine_tokenAddressAndPriceFeedEngineMustBeSameLength();
     error DSCEngine_TokenNotAllowed();
     error DSCEngine_TransferFailed();
+    error DSCEngine_BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__MintFailed();
 
 
 
     //State Variables
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
+    uint256 private constant LIQUIDATION_THRESHOLD = 50; //200% collateralized
+    uint256 private constant LIQUIDATION_PRECISION = 100;
+    uint256 private constant MIN_HEALTH_FACTOR = 1;
 
 
     mapping(address token => address priceFeed) private s_priceFeeds; //tokenToPriceFeed
@@ -146,7 +151,11 @@ contract DSCEngine is ReentrancyGuard {
     function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant{
         s_DSCMinted[msg.sender] += amountDscToMint;
         // if they minted too much, then revert
-        revertIfHealthFactorIsBroken(msg.sender);
+        _revertIfHealthFactorIsBroken(msg.sender);
+        bool minted = i_dsc.mint(msg.sender, amountDscToMint);
+        if(!minted) {
+            revert DSCEngine__MintFailed();
+        }
     }
 
     function burnDsc() external {}
@@ -168,11 +177,19 @@ contract DSCEngine is ReentrancyGuard {
        //we need :  1.  total DSC minted,  2. total collateral VALUE
 
        (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
-          }
+       //return (collateralValueInUsd / totalDscMinted); //it will return the collateral value
+       uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+       //1000 ETH * 50 = 50,000 / 100 = 500
+       return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
+    }
 
-    function revertIfHealthFactorIsBroken(address user) internal view{
+    function _revertIfHealthFactorIsBroken(address user) internal view{
        //1. check healthfactor
        //2. Revert if they do not have a good health factor
+       uint256 userHealthFactor = _healthFactor(user);
+       if(userHealthFactor < MIN_HEALTH_FACTOR){
+           revert DSCEngine_BreaksHealthFactor(userHealthFactor);
+       }
       
     }
 
