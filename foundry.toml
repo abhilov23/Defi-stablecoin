@@ -4,7 +4,8 @@ out = "out"
 libs = ["lib"]
 remappings = [
     '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
-    '@chainlink/contracts/=lib/chainlink/contracts/'
+    '@chainlink/contracts/=lib/chainlink/contracts/',
+    "forge-std/=lib/forge-std/src/"
 ]
 
 #here we defines the endpoints which we can pass while giving the commands
