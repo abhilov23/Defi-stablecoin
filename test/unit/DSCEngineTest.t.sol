@@ -18,16 +18,15 @@ contract DSCEngineTest is Test {
 
     address public USER = makeAddr("user");
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
+    uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
     function setUp() public {
         // Reset any prank state
         vm.stopPrank();
 
-        // Deploy contracts manually to control ownership
         config = new HelperConfig();
         (ethUsdPriceFeed,, weth,,) = config.activeNetworkConfig();
 
-        // Deploy DecentralizedStableCoin with test contract as owner
         address testOwner = address(this);
         dsc = new DecentralizedStableCoin(testOwner);
 
@@ -37,10 +36,9 @@ contract DSCEngineTest is Test {
         tokenAddresses[0] = weth;
         priceFeedAddresses[0] = ethUsdPriceFeed;
         dsce = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
-
-        // Transfer ownership of DecentralizedStableCoin to DSCEngine
         vm.prank(testOwner);
         dsc.transferOwnership(address(dsce));
+        ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE);
     }
 
     // Price tests
