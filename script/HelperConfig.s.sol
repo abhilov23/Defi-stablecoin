@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import { MockV3Aggregator } from "../test/mocks/MockV3Aggregator.sol";
 import { Script } from "forge-std/Script.sol";
-import { ERC20Mock } from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/mocks/ERC20Mock.sol"
+import { ERC20Mock } from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/mocks/ERC20Mock.sol";
 
 
 contract HelperConfig is Script {

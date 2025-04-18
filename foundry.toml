@@ -14,4 +14,4 @@ sepolia = "https://sepolia.infura.io/v3/84957a0b5c6f43668c65a3cc65ac53ce"
 
 #here we can define the etherscan-api for verification, by passing --verify parameter
 [etherscan]
-sepolia = { key = "${ETHERSCAN_API_KEY}" }
+sepolia = { key = "E31XU9BEEEMVEPH7XRICNN2N7ASJQMXEI9" }
