@@ -58,6 +58,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFailed();
     error DSCEngine_HealthFactorOK();
     error DSCEngine__HealthFactorNotImproved();
+    error DSCEngine_InvalidDscAddress();
 
 
 
@@ -104,6 +105,9 @@ contract DSCEngine is ReentrancyGuard {
         //USD price-fees
         if (tokenAddresses.length != priceFeedAddresses.length) {
             revert DSCEngine_tokenAddressAndPriceFeedEngineMustBeSameLength();
+        }
+        if (dscAddress == address(0)) {
+            revert DSCEngine_InvalidDscAddress();
         }
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
             s_priceFeeds[tokenAddresses[i]] = priceFeedAddresses[i];
@@ -261,6 +265,9 @@ contract DSCEngine is ReentrancyGuard {
        //we need :  1.  total DSC minted,  2. total collateral VALUE
 
        (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
+       if (totalDscMinted == 0) {
+        return type(uint256).max;
+        }
        //return (collateralValueInUsd / totalDscMinted); //it will return the collateral value
        uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
        //1000 ETH * 50 = 50,000 / 100 = 500
@@ -280,7 +287,6 @@ contract DSCEngine is ReentrancyGuard {
 
 
     //public & external functions
-
    function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns(uint256){
     // price of ETH (token)
     AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
@@ -288,10 +294,6 @@ contract DSCEngine is ReentrancyGuard {
     // ($10e18) / ($2000e8 * 1e10)
     return (usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
    }
-
-
-
-
 
 
 
@@ -312,4 +314,9 @@ contract DSCEngine is ReentrancyGuard {
     return (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION;
     }
 
+
+
+    function getAccountInformation(address user) external view returns(uint256 totalDscMinted, uint256 collateralValueInUsd){
+        (totalDscMinted, collateralValueInUsd)= _getAccountInformation(user);
+    }
 }

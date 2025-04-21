@@ -8,6 +8,9 @@ import {DSCEngine} from "../../src/DSCEngine.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/mocks/ERC20Mock.sol";
 
+
+
+
 contract DSCEngineTest is Test {
     DeployDSC deployer;
     DecentralizedStableCoin dsc;
@@ -21,10 +24,6 @@ contract DSCEngineTest is Test {
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTING_ERC20_BALANCE = 10 ether;
 
-    // Public state vars (for shadowing fix)
-    address[] public tokenAddresses;
-    address[] public priceFeedAddresses;
-
     function setUp() public {
         // Reset any prank state
         vm.stopPrank();
@@ -35,19 +34,21 @@ contract DSCEngineTest is Test {
         address testOwner = address(this);
         dsc = new DecentralizedStableCoin(testOwner);
 
-        // Use different names to avoid shadowing state variables
-        address ;
-        address ;
-        _tokenAddresses[0] = weth;
-        _priceFeedAddresses[0] = ethUsdPriceFeed;
-
-        dsce = new DSCEngine(_tokenAddresses, _priceFeedAddresses, address(dsc));
+        // Deploy DSCEngine
+        address[] memory tokenAddresses = new address[](1);
+        address[] memory priceFeedAddresses = new address[](1);
+        tokenAddresses[0] = weth;
+        priceFeedAddresses[0] = ethUsdPriceFeed;
+        dsce = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
         vm.prank(testOwner);
         dsc.transferOwnership(address(dsce));
-
-        // Give USER some collateral
         ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE);
     }
+
+    //constructor test
+    address[] public tokenAddresses;
+    address[] public priceFeedAddresses;
+
 
     function testRevertsIfTokenLengthDoesntMatchPriceFeeds() public {
         tokenAddresses.push(weth);
@@ -58,13 +59,19 @@ contract DSCEngineTest is Test {
         new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
     }
 
-    function testgetTokenAmountFromUsd() public {
+
+    function testgetTokenAmountFromUsd() public{
         uint256 usdAmount = 100 ether;
+        // If we want $100 of WETH @ $2000/WETH, that would be 0.05 WETH
         uint256 expectedWeth = 0.05 ether;
         uint256 amountWeth = dsce.getTokenAmountFromUsd(weth, usdAmount);
         assertEq(amountWeth, expectedWeth);
     }
 
+
+
+
+    // Price tests
     function testGetUsdValue() public {
         uint256 ethAmount = 15e18;
         uint256 expectedUsd = 30000e18;
@@ -83,8 +90,39 @@ contract DSCEngineTest is Test {
     function testRevertsWithUnapprovedCollateral() public {
         ERC20Mock randToken = new ERC20Mock("RAN", "RAN", USER, AMOUNT_COLLATERAL);
         vm.startPrank(USER);
-        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine_TokenNotAllowed.selector, address(randToken)));
+        vm.expectRevert(DSCEngine.DSCEngine_TokenNotAllowed.selector);
         dsce.depositCollateral(address(randToken), AMOUNT_COLLATERAL);
         vm.stopPrank();
     }
+
+    modifier depositedCollateral(){
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+        _;
+    }
+
+    function testCanDepositedCollateralAndGetAccountInfo() public depositedCollateral {
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dsce.getAccountInformation(USER);
+        uint256 expectedTotalDscMinted = 0;
+        uint256 expectedDepositAmount = dsce.getTokenAmountFromUsd(weth, collateralValueInUsd);
+        assertEq(totalDscMinted, expectedTotalDscMinted);
+        assertEq(AMOUNT_COLLATERAL ,expectedDepositAmount);
+    }
+    
+
+    //checking the DSC address
+    function testRevertsIfDscAddressIsZero() public {
+        address[] memory tokenAddresses = new address[](1);
+        address[] memory priceFeedAddresses = new address[](1);
+        tokenAddresses[0] = weth;
+        priceFeedAddresses[0] = ethUsdPriceFeed;
+    
+        vm.expectRevert(DSCEngine.DSCEngine_InvalidDscAddress.selector);
+        new DSCEngine(tokenAddresses, priceFeedAddresses, address(0));
+    }
+
+
+
 }
