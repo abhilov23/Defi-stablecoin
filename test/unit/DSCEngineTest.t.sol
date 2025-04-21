@@ -7,7 +7,7 @@ import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@chainlink/contracts/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/mocks/ERC20Mock.sol";
-
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 
@@ -123,6 +123,56 @@ contract DSCEngineTest is Test {
         new DSCEngine(tokenAddresses, priceFeedAddresses, address(0));
     }
 
+
+    function testConstructorSetsTokenAndPriceFeedCorrectlyIndirect() public {
+        address[] memory tokenAddresses = new address[](1);
+        address[] memory priceFeedAddresses = new address[](1);
+        tokenAddresses[0] = weth;
+        priceFeedAddresses[0] = ethUsdPriceFeed;
+    
+        DSCEngine newDsce = new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
+    
+        uint256 ethAmount = 15e18;
+        uint256 expectedUsd = 30000e18; // 15 ETH * $2000
+        uint256 actualUsd = newDsce.getUsdValue(weth, ethAmount);
+        assertEq(actualUsd, expectedUsd);
+    
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(newDsce), AMOUNT_COLLATERAL);
+        newDsce.depositCollateral(weth, AMOUNT_COLLATERAL); // Should succeed if weth is allowed
+        vm.stopPrank();
+    
+        (, uint256 collateralValueInUsd) = newDsce.getAccountInformation(USER);
+        uint256 expectedDepositAmount = newDsce.getTokenAmountFromUsd(weth, collateralValueInUsd);
+        assertEq(expectedDepositAmount, AMOUNT_COLLATERAL);
+    }
+
+    function testRevertsIfTransferFromFails() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dsce), AMOUNT_COLLATERAL);
+        
+        vm.mockCall(
+            weth,
+            abi.encodeWithSelector(IERC20.transferFrom.selector, USER, address(dsce), AMOUNT_COLLATERAL),
+            abi.encode(false)
+        );
+        
+        vm.expectRevert(DSCEngine.DSCEngine_TransferFailed.selector);
+        dsce.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+    }
+
+
+    //Verifies that depositing WETH twice correctly accumulates in s_collateralDeposited (e.g., total WETH deposited is AMOUNT_COLLATERAL * 2).
+    function testMintDscWithSufficientCollateral() public depositedCollateral {
+        uint256 amountDscToMint = 1000e18;
+        vm.startPrank(USER);
+        dsce.mintDsc(amountDscToMint);
+        vm.stopPrank();
+    
+        (uint256 totalDscMinted,) = dsce.getAccountInformation(USER);
+        assertEq(totalDscMinted, amountDscToMint);
+    }
 
 
 }

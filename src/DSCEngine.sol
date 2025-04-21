@@ -315,8 +315,30 @@ contract DSCEngine is ReentrancyGuard {
     }
 
 
+    /////////////////////////////
+    ///External test functions///
+    /////////////////////////////
+
 
     function getAccountInformation(address user) external view returns(uint256 totalDscMinted, uint256 collateralValueInUsd){
         (totalDscMinted, collateralValueInUsd)= _getAccountInformation(user);
     }
+
+
+    function getPriceFeed(address token) external view returns(address){
+        return s_priceFeeds[token];
+    }
+
+    function getCollateralToken(uint256 index) external view returns (address) {
+        if (index >= s_collateralTokens.length) {
+            revert("Index out of bounds");
+        }
+        return s_collateralTokens[index];
+    }
+    
+    function getCollateralTokensLength() external view returns (uint256) {
+        return s_collateralTokens.length;
+    }
+
+
 }
