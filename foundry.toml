@@ -8,6 +8,12 @@ remappings = [
     "forge-std/=lib/forge-std/src/"
 ]
 
+[invariant]
+runs  = 128
+depth = 128
+fail_on_revert=false
+
+
 #here we defines the endpoints which we can pass while giving the commands
 [rpc_endpoints]
 sepolia = "https://sepolia.infura.io/v3/84957a0b5c6f43668c65a3cc65ac53ce"
